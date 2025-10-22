@@ -1,4 +1,3 @@
-# build_index.py
 import os, glob, pickle
 from pathlib import Path
 from typing import Dict, Any, List
@@ -13,7 +12,7 @@ INDEX_DIR = os.getenv("INDEX_DIR", "index")
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "600"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "120"))
 EMB_MODEL = os.getenv("EMB_MODEL_NAME", "BAAI/bge-m3")
-EMB_BATCH = int(os.getenv("EMB_BATCH", "32"))  # istersen ayarlarsın
+EMB_BATCH = int(os.getenv("EMB_BATCH", "32"))  
 
 def _as_dict(md: Any) -> Dict[str, Any]:
     """Her ihtimale karşı metadata'yı dict'e zorla."""
@@ -21,7 +20,6 @@ def _as_dict(md: Any) -> Dict[str, Any]:
         return {}
     if isinstance(md, dict):
         return md
-    # str / tuple / başka tipler -> source alanına koy
     return {"source": str(md)}
 
 def detect_course_from_path(p: str) -> str:
@@ -48,7 +46,7 @@ def detect_unit_from_path(p: str) -> str:
         parts = list(Path(p).parts)
         if "data" in parts:
             i = parts.index("data")
-            # data/<course>/<unit>/...
+            
             if i + 2 < len(parts):
                 return parts[i + 2]
     except Exception:
@@ -67,7 +65,6 @@ def load_documents() -> List:
         for d in ld:
             md = _as_dict(getattr(d, "metadata", {}))
             md.setdefault("source", os.path.basename(p))
-            # bazı loader'lar page_number kullanıyor
             md["page"] = md.get("page", md.get("page_number"))
             md.setdefault("course", detect_course_from_path(p))
             unit = md.get("unit") or detect_unit_from_path(p)
@@ -88,7 +85,6 @@ def load_documents() -> List:
             if unit:
                 md["unit"] = unit
             md.setdefault("path", str(Path(p)))
-            # text/markdown'da sayfa olmayabilir
             md["page"] = md.get("page", None)
             d.metadata = md
         docs += ld
@@ -115,7 +111,6 @@ def main(rebuild: bool = False):
     )
     chunks = splitter.split_documents(docs)
 
-    # chunk metadata'larını da garantiye al (dict değilse düzelt)
     for c in chunks:
         c.metadata = _as_dict(getattr(c, "metadata", {}))
         c.metadata.setdefault("source", c.metadata.get("source", "unknown"))
@@ -136,15 +131,13 @@ def main(rebuild: bool = False):
     X = np.asarray(X, dtype="float32")
 
     print("[*] FAISS yazılıyor…")
-    index = faiss.IndexFlatIP(X.shape[1])  # normalize -> cosine ~ inner product
+    index = faiss.IndexFlatIP(X.shape[1])  
     index.add(X)
     faiss.write_index(index, faiss_path)
 
-    # chunks Document listesi olarak (tip güvenli) kalıyor
     with open(chunks_path, "wb") as f:
         pickle.dump(chunks, f)
 
-    # Hızlı sağlık kontrolü: ilk chunk'ın metadata tipi
     sample_md = type(chunks[0].metadata).__name__
     print(f"[✓] Kaydedildi → {faiss_path}  |  {chunks_path} (metadata type: {sample_md})")
 
