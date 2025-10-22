@@ -21,15 +21,14 @@ _index: Optional[faiss.Index] = None
 _chunks: Optional[List[Dict]] = None
 _gemini_model: Optional[genai.GenerativeModel] = None
 
-# ====== KURS / DERS EŞLEME ======
-# NOTE: index üretirken kullandığın klasör/metadata isimleriyle birebir tut
+
 COURSE_MAP = {
     "ceng_102":           ["ceng102", "ceng 102", "programlama", "python dersi", "ceng_102"],
     "computer_networks":  ["computer networks", "bilgisayar ağları", "ağ", "tcp", "udp", "cn", "computer_networks"],
     "plc_204":            ["plc", "ladder", "otomasyon", "plc204", "plc 204", "plc_204"],
 }
 
-# ====== HELPERS ======
+
 def _load_embedder():
     global _embedder
     if _embedder is None:
@@ -68,14 +67,14 @@ def _infer_course(source_name: str) -> Optional[str]:
 
 def _normalize_record(rec) -> Dict:
     """LangChain Document veya dict olabilir; her durumda dict döndür."""
-    if hasattr(rec, "page_content"):  # Document
+    if hasattr(rec, "page_content"):  
         text = getattr(rec, "page_content", "")
         meta = getattr(rec, "metadata", {}) or {}
         src  = meta.get("source", "unknown.pdf")
         page = meta.get("page")
         course = meta.get("course") or _infer_course(src)
         return {"text": text, "source": src, "page": page, "course": course}
-    # dict
+    
     src  = rec.get("source","unknown.pdf")
     page = rec.get("page")
     course = rec.get("course") or _infer_course(src)
@@ -92,7 +91,7 @@ def _retrieve(query: str, k: int = 5, only_course: Optional[str] = None) -> List
     idx = _load_index()
     raw_chunks = _load_chunks()
     qv = _embed([query])
-    D, I = idx.search(qv, max(k*4, k))  # geniş getir, sonra filtrele
+    D, I = idx.search(qv, max(k*4, k))  
     hits: List[Dict] = []
     for i, score in zip(I[0], D[0]):
         if i == -1:
@@ -110,7 +109,7 @@ def _retrieve(query: str, k: int = 5, only_course: Optional[str] = None) -> List
         if len(hits) >= k:
             break
 
-    # filtre sebebiyle k dolmadıysa genel havuzdan tamamla
+    # filtre sebebiyle k dolmadıysa genel havuzdan tamamlama
     if only_course and len(hits) < max(3, k//2):
         for i, score in zip(I[0], D[0]):
             if i == -1:
@@ -147,7 +146,7 @@ def _ctx_block(hits: List[Dict]) -> str:
         parts.append(f"[{tag}]\n{h['text']}")
     return "\n\n---\n\n".join(parts)
 
-# ====== GEMINI ======
+# GEMINI 
 def _load_llm() -> genai.GenerativeModel:
     """Gemini modelini (doğru adla) bir kez başlat."""
     global _gemini_model
@@ -191,7 +190,7 @@ def _gemini_call(prompt: str) -> str:
     resp = model.generate_content(prompt)
     return getattr(resp, "text", str(resp))
 
-# ====== PUBLIC API ======
+# PUBLIC API 
 def reply(user_text: str, k: int = 5) -> Tuple[str, List[str], Optional[str]]:
     """
     Komut algılama:
@@ -204,7 +203,7 @@ def reply(user_text: str, k: int = 5) -> Tuple[str, List[str], Optional[str]]:
     t = user_text.strip()
     low = t.lower()
 
-    # Komut
+
     if low.startswith("özet") or "özet ver" in low:
         mode = "summary"
         query = re.sub(r"^özet( ver)?[:\- ]*", "", t, flags=re.I).strip() or "özet"
@@ -223,10 +222,9 @@ def reply(user_text: str, k: int = 5) -> Tuple[str, List[str], Optional[str]]:
     ans = _gemini_call(prompt)
     return ans, _sources(hits), course
 
-# ---- UI'nin beklediği wrapper'lar ----
+#  wrapperlar 
 def ask(q: str, course: Optional[str] = None):
     if course:
-        # course ipucunu doğrudan soruya eklemek istersen:
         q = f"{q} ({course})"
     ans, srcs, _ = reply(q)
     return ans, srcs

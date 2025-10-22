@@ -1,22 +1,19 @@
-# streamlit_app.py
 import os
 import streamlit as st
 from dotenv import load_dotenv
 load_dotenv()
 
-from rag_pipeline import ask  # summarize/quiz yok
+from rag_pipeline import ask  
 
 st.set_page_config(page_title="EduRAG", page_icon="🧠", layout="wide")
 st.title("🧠 EduRAG — Ders Notları Asistanı")
 st.caption("Gemini + bge-m3 + FAISS + LangChain + Streamlit")
 
-# ---------- Yardımcılar: Kaynak normalizasyonu ----------
 def _normalize_doc(d):
     """
     Her tipten girdiyi (Document, (Document,score), dict, str, tuple, list)
     güvenli biçimde (text, metadata: dict) olarak döndür.
     """
-    # (Document, score) -> Document
     if isinstance(d, (tuple, list)) and len(d) >= 1 and not hasattr(d, "page_content"):
         d = d[0]
 
@@ -28,7 +25,7 @@ def _normalize_doc(d):
             md = {"source": str(md)}
         return text, md
 
-    # dict kayıt
+    
     if isinstance(d, dict):
         text = d.get("text") or d.get("content") or d.get("page_content") or ""
         md = d.get("metadata") or d.get("meta") or {}
@@ -36,7 +33,7 @@ def _normalize_doc(d):
             md = {"source": str(md)}
         return text, md
 
-    # düz string / diğer tipler
+    
     return str(d), {"source": str(d)}
 
 def render_sources_any(sources):
@@ -47,15 +44,15 @@ def render_sources_any(sources):
     - None
     Bu fonksiyon her durumda güvenli bir markdown üretir.
     """
-    # None / boş
+    
     if not sources:
         return "_(seçili kaynak yok)_"
 
-    # DÜZ STRING: olduğu gibi göster
+    
     if isinstance(sources, str):
         return sources if sources.strip() else "_(kaynak metni yok)_"
 
-    # LİSTE/TUPLE: her bir öğeyi normalize ederek yaz
+    
     if isinstance(sources, (list, tuple)):
         lines = []
         for i, h in enumerate(sources, 1):
@@ -70,7 +67,7 @@ def render_sources_any(sources):
             lines.append(f"- [{src}{tag_page}{tag_sect}]{tag_course}")
         return "\n".join(lines) if lines else "_(seçili kaynak yok)_"
 
-    # bilinmeyen tekil tip: stringe çevir
+    
     return str(sources)
 
 # İpucu kartı
@@ -81,7 +78,7 @@ with st.expander("ℹ️ Nasıl çalışır?", expanded=False):
 - Aşağıdan dersi seç, sorunuzu yaz, **Çalıştır**.
 """)
 
-# 3 sekme: klasör isimlerinle aynı tutman iyi olur
+
 tab1, tab2, tab3 = st.tabs(["CENG102", "Computer Networks", "PLC 204"])
 
 def qa_tab(label, course_key):
@@ -92,9 +89,8 @@ def qa_tab(label, course_key):
         if go and q.strip():
             with st.spinner("Yanıt üretiliyor..."):
                 try:
-                    ans, srcs = ask(q.strip(), course=course_key)   # <-- ders filtresi
+                    ans, srcs = ask(q.strip(), course=course_key)  
                     st.markdown("### Yanıt")
-                    # ans string veya markdown olabilir
                     st.write(ans)
 
                     st.markdown("### Kaynaklar")
@@ -102,7 +98,6 @@ def qa_tab(label, course_key):
                 except Exception as e:
                     st.error(f"Hata: {e}")
 
-# course isimlerini metadata'daki 'course' ile birebir yap
 qa_tab(tab1, "ceng_102")
 qa_tab(tab2, "computer_networks")
 qa_tab(tab3, "plc_204")
