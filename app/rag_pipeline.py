@@ -1,5 +1,3 @@
-# rag_pipeline.py — FIXED
-
 import os, pickle, re
 from typing import List, Dict, Tuple, Optional
 import numpy as np
@@ -8,14 +6,14 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import google.generativeai as genai
 
-# ====== ENV / PATHS ======
+#  ENV / PATHS 
 EMB_MODEL_NAME = os.getenv("EMB_MODEL_NAME", "BAAI/bge-m3")
 INDEX_DIR      = os.getenv("INDEX_DIR", "index")
 FAISS_PATH     = os.path.join(INDEX_DIR, "faiss.index")
 CHUNKS_PATH    = os.path.join(INDEX_DIR, "chunks.pkl")
 LLM_MODEL      = os.getenv("LLM_MODEL", "gemini-1.5-pro-latest")  # doğru ad
 
-# ====== SINGLETONS ======
+#  SINGLETONS
 _embedder: Optional[SentenceTransformer] = None
 _index: Optional[faiss.Index] = None
 _chunks: Optional[List[Dict]] = None
@@ -214,7 +212,7 @@ def reply(user_text: str, k: int = 5) -> Tuple[str, List[str], Optional[str]]:
         mode = "qna"
         query = t
 
-    course = detect_course(low)  # None olabilir
+    course = detect_course(low) 
     hits = _retrieve(query, k=k, only_course=course)
     ctx = _ctx_block(hits)
 
